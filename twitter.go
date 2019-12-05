@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -16,28 +16,27 @@ func newTwitterScraper(url string) *twitterScraper {
 	return &twitterScraper{url: url}
 }
 
-func (t twitterScraper) Exec() (body string, err error) {
+func (t twitterScraper) Exec() (tweets []string, err error) {
 	res, err := http.Get(t.url)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
+		return []string{}, fmt.Errorf("status code error: %s", res.Status)
 	}
 
-	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
-	log.Print(doc.Text())
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
-	// Find the review items
-	doc.Find("article").Each(func(i int, s *goquery.Selection) {
-		// For each item found, get the band and title
-		fmt.Printf("article: %s\n", s.Text())
+	var arr []string
+
+	doc.Find(".js-tweet-text-container").Each(func(i int, s *goquery.Selection) {
+		t := s.Text()
+		arr = append(arr, strings.TrimSpace(t))
 	})
 
-	return body, nil
+	return arr, nil
 }

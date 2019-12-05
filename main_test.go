@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -9,6 +12,16 @@ var sentences = []string{
 	"今日は良い天気だった。",
 	"すごくだるい",
 	"速達で追跡つけて送って欲しいと頼んだんだけど、明日に届けばいいなら要らないと思った。",
+}
+
+func newTestServer() *httptest.Server {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "testdata/twitter_ykpythemind_response.html")
+	})
+
+	return httptest.NewServer(mux)
 }
 
 func TestTokenize(t *testing.T) {
@@ -22,7 +35,16 @@ func TestMakeSentence(t *testing.T) {
 }
 
 func TestTwitterScrap(t *testing.T) {
-	tw := newTwitterScraper("https://twitter.com/ykpythemind")
+	ts := newTestServer()
+	defer ts.Close()
 
-	tw.Exec()
+	tw := newTwitterScraper(ts.URL)
+	arr, err := tw.Exec()
+	if err != nil {
+		t.Fatalf("exec err: %s", err)
+	}
+
+	if !strings.Contains(arr[0], "【RT希望】") {
+		t.Error("fail to parse tweet?")
+	}
 }
