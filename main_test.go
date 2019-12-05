@@ -14,6 +14,10 @@ var sentences = []string{
 	"速達で追跡つけて送って欲しいと頼んだんだけど、明日に届けばいいなら要らないと思った。",
 }
 
+func init() {
+	myTwitter = "/"
+}
+
 func newTestServer() *httptest.Server {
 	mux := http.NewServeMux()
 

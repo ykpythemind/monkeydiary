@@ -11,8 +11,22 @@ import (
 	"github.com/ikawaha/kagome/tokenizer"
 )
 
+var myTwitter = "https://twitter.com/ykpythemind"
+
 func main() {
-	fmt.Printf("hoge")
+	ts := newTwitterScraper(myTwitter)
+	tweets, err := ts.Exec()
+	if err != nil {
+		log.Fatalf("twitter execution error %s", err)
+	}
+
+	rand.Seed(time.Now().Unix())
+
+	token := tokenize(tweets[1:])                // 固定ツイートをスキップ
+	res := token.makeSentence(rand.Intn(20) + 5) // 5...25
+
+	fmt.Println(res)
+
 	os.Exit(0)
 }
 
