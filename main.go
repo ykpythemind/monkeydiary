@@ -27,6 +27,12 @@ func main() {
 
 	fmt.Println(res)
 
+	file, err := createFile(strings.NewReader(res))
+	if err != nil {
+		log.Fatal(err)
+	}
+	file.Close()
+
 	os.Exit(0)
 }
 
