@@ -6,3 +6,5 @@ run:
 
 deps:
 		go mod verify
+
+cron: deps run
