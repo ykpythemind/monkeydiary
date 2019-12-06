@@ -1,14 +1,44 @@
 package main
 
 import (
-	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestGithubExecute(t *testing.T) {
-	github := newGithubService()
+type githubServiceImplMock struct {
+}
+
+func (g *githubServiceImplMock) clone() (dir string, err error) {
+	dir, err = ioutil.TempDir("", "test")
+	if err != nil {
+		panic(err)
+	}
+
+	// dataディレクトリも必要
+	if err := os.Mkdir(filepath.Join(dir, "data"), 0777); err != nil {
+		panic(err)
+	}
+
+	return
+}
+
+func (g *githubServiceImplMock) add(path string) error {
+	return nil
+}
+
+func (g *githubServiceImplMock) commit() error {
+	return nil
+}
+
+func (g *githubServiceImplMock) push() error {
+	return nil
+}
+
+func TestExecuteGitOperation(t *testing.T) {
+	github := &githubServiceImplMock{}
 
 	data := "aaaaaaaa"
 
@@ -21,9 +51,7 @@ func TestGithubExecute(t *testing.T) {
 		os.Remove(file.Name())
 	}()
 
-	fmt.Println(file.Name())
-
-	if err := github.execute(file.Name()); err != nil {
+	if err := executeGitOperation(file.Name(), github); err != nil {
 		t.Error(err)
 	}
 }

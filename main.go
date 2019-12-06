@@ -25,13 +25,22 @@ func main() {
 	token := tokenize(tweets[1:])                // 固定ツイートをスキップ
 	res := token.makeSentence(rand.Intn(20) + 5) // 5...25
 
-	fmt.Println(res)
+	log.Printf("generated diary. \n%s\n", res)
 
 	file, err := createFile(strings.NewReader(res))
 	if err != nil {
 		log.Fatal(err)
 	}
-	file.Close()
+	defer func() {
+		file.Close()
+		os.Remove(file.Name())
+	}()
+
+	g := newGithubService()
+	err = executeGitOperation(file.Name(), g)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	os.Exit(0)
 }
@@ -75,7 +84,7 @@ func (t processedToken) makeSentence(tokenSize int) string {
 
 	for i := 0; i < 50; i++ {
 		sampled := t.rest[rand.Intn(len(t.rest))]
-		log.Printf("token: %s", sampled)
+		// log.Printf("token: %s", sampled)
 		samples = append(samples, sampled)
 	}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -10,43 +9,43 @@ import (
 	"time"
 
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
 
 type githubService interface {
-	execute(srcFilePath string) error
+	clone() (dir string, err error)
+	add(path string) error
+	commit() error
+	push() error
 }
 
 type githubServiceImpl struct {
+	repository *git.Repository
 }
 
 func newGithubService() githubService {
-	return githubServiceImpl{}
+	return &githubServiceImpl{}
 }
 
-// Execute executes git clone, copy specified file, commit, and push.
-func (g githubServiceImpl) execute(srcFilePath string) error {
-	repo, dir, err := clone()
+// executeGitOperation executes git clone, copy specified file, commit, and push.
+func executeGitOperation(srcFilePath string, githubService githubService) error {
+	dir, err := githubService.clone()
 	if err != nil {
 		return err
 	}
 
-	// prev, err := filepath.Abs(".")
-	// if err != nil {
-	// 	return err
-	// }
-	// defer os.Chdir(prev)
-
-	// os.Chdir(dir)
-
+	log.Println("copy src file to repo's directory")
 	sourceFile, err := os.Open(srcFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer sourceFile.Close()
 
+	newFilePath := filepath.Join(dir, "data", time.Now().Format(time.RFC3339))
+
 	// Create new file
-	newFile, err := os.Create(filepath.Join(dir, time.Now().Format(time.RFC822)))
+	newFile, err := os.Create(newFilePath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,33 +56,26 @@ func (g githubServiceImpl) execute(srcFilePath string) error {
 		log.Fatal(err)
 	}
 
-	worktree, err := repo.Worktree()
-	if err != nil {
+	log.Println("add")
+	if err := githubService.add(filepath.Join("data", filepath.Base(newFilePath))); err != nil {
 		return err
 	}
 
-	fmt.Println("worktree add")
-
-	_, err = worktree.Add(newFile.Name())
-	if err != nil {
+	log.Println("commit")
+	if err := githubService.commit(); err != nil {
 		return err
 	}
 
-	fmt.Println("commit")
-	_, err = worktree.Commit("ya", &git.CommitOptions{})
-	if err != nil {
+	log.Println("push")
+	if err := githubService.push(); err != nil {
 		return err
 	}
 
-	fmt.Println("push")
-	if err := repo.Push(&git.PushOptions{}); err != nil {
-		return err
-	}
-
+	log.Println("done")
 	return nil
 }
 
-func clone() (repository *git.Repository, dir string, err error) {
+func (g *githubServiceImpl) clone() (dir string, err error) {
 	// Tempdir to clone the repository
 	dir, err = ioutil.TempDir("", "clone-example")
 	if err != nil {
@@ -93,12 +85,9 @@ func clone() (repository *git.Repository, dir string, err error) {
 	// defer os.RemoveAll(dir) // clean up
 
 	// Clones the repository into the given dir, just as a normal git clone does
-	repository, err = git.PlainClone(dir, false, &git.CloneOptions{
-		URL: "https://github.com/ykpythemind/monkeydiary_web",
-		Auth: &http.BasicAuth{
-			Username: "ykpythemind",
-			Password: accessToken(),
-		},
+	repository, err := git.PlainClone(dir, false, &git.CloneOptions{
+		URL:   "https://github.com/ykpythemind/monkeydiary_web",
+		Auth:  newAuth(),
 		Depth: 1,
 	})
 
@@ -106,7 +95,59 @@ func clone() (repository *git.Repository, dir string, err error) {
 		return
 	}
 
+	g.repository = repository
+
 	return
+}
+
+func (g *githubServiceImpl) add(path string) error {
+	worktree, err := g.repository.Worktree()
+	if err != nil {
+		return err
+	}
+
+	if _, err := worktree.Add(path); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *githubServiceImpl) commit() error {
+	worktree, err := g.repository.Worktree()
+	if err != nil {
+		return err
+	}
+
+	_, err = worktree.Commit("Monkey wrote diary.", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "ykpythemind",
+			Email: "yukibukiyou@gmail.com",
+			When:  time.Now(),
+		},
+	})
+
+	return err
+}
+
+func (g *githubServiceImpl) push() error {
+	err := g.repository.Push(&git.PushOptions{
+		Auth: newAuth(),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func newAuth() *http.BasicAuth {
+	return &http.BasicAuth{
+		Username: "ykpythemind",
+		Password: accessToken(),
+	}
+
 }
 
 func accessToken() string {
