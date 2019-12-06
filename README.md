@@ -17,6 +17,6 @@ $ go run .
 ## workflow
 
 1. Run by cron
-1. Run monkeydiary (write diary)
-1. push diary to https://github.com/ykpythemind/monkeydiary_web
-1. build and release to github pages
+1. Monkey writes diary ;))
+1. Push diary to https://github.com/ykpythemind/monkeydiary_web
+1. Build and release to github pages
