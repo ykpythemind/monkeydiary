@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -89,4 +91,19 @@ func (t processedToken) makeSentence(tokenSize int) string {
 	}
 
 	return strings.Join(samples, "")
+}
+
+func createFile(src io.Reader) (file *os.File, err error) {
+	tmpfile, err := ioutil.TempFile("", "diary")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = io.Copy(tmpfile, src)
+	if err != nil {
+		tmpfile.Close()
+		return nil, err
+	}
+
+	return tmpfile, nil
 }
