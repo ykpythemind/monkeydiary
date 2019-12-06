@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -14,8 +12,18 @@ import (
 )
 
 var myTwitter = "https://twitter.com/ykpythemind"
+var myRepository = "https://github.com/ykpythemind/monkeydiary_web"
+var myName = "ykpythemind"
+
+type config struct {
+	watchTwitterAccount string
+	diaryRepository     string
+	userName            string
+}
 
 func main() {
+	config := newConfig()
+
 	ts := newTwitterScraper(myTwitter)
 	tweets, err := ts.Exec()
 	if err != nil {
@@ -29,22 +37,37 @@ func main() {
 
 	log.Printf("generated diary. \n%s\n", res)
 
-	file, err := createFile(strings.NewReader(res))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		file.Close()
-		os.Remove(file.Name())
-	}()
-
-	g := newGithubService()
-	err = executeGitOperation(file.Name(), g)
+	r := strings.NewReader(res)
+	g := newUploadGithubService(config)
+	err = g.upload(r)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	os.Exit(0)
+}
+
+func newConfig() *config {
+	watchTwitterAccount := os.Getenv("TWITTER_ACCOUNT_ID")
+	if watchTwitterAccount == "" {
+		watchTwitterAccount = myTwitter
+	}
+
+	diaryRepository := os.Getenv("TARGET_REPOSITORY_URL")
+	if diaryRepository == "" {
+		diaryRepository = myRepository
+	}
+
+	userName := os.Getenv("GITHUB_USERNAME")
+	if userName == "" {
+		userName = myName
+	}
+
+	return &config{
+		watchTwitterAccount: watchTwitterAccount,
+		diaryRepository:     diaryRepository,
+		userName:            userName,
+	}
 }
 
 type processedToken struct {
@@ -91,19 +114,4 @@ func (t processedToken) makeSentence(tokenSize int) string {
 	}
 
 	return strings.Join(samples, "")
-}
-
-func createFile(src io.Reader) (file *os.File, err error) {
-	tmpfile, err := ioutil.TempFile("", "diary")
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = io.Copy(tmpfile, src)
-	if err != nil {
-		tmpfile.Close()
-		return nil, err
-	}
-
-	return tmpfile, nil
 }
