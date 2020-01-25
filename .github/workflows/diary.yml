@@ -1,7 +1,7 @@
 name: diary
 on:
   schedule:
-    - cron: '0 11 * * *'
+    - cron: '0 0 * * 0'
   #[push]
 jobs:
   build:
